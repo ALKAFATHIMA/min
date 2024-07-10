@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Page</title>
+    <style>
+        /* Overall UI styling */
+        body {
+            background-color: #f8f8f8; /* Light grey */
+            color: #000000; /* Dark grey */
+            font-family: Arial, sans-serif;
+            margin: 10px;
+        }
+
+        /* Header styling */
+        h2 {
+            color: #333; /* Dark grey */
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* Button styling */
+        button {
+            background-color: #e74c3c; /* Red */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #c0392b; /* Darker red on hover */
+        }
+
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2; /* Light grey */
+        }
+        .editable-input {
+            width: 100%;
+            border: none;
+            background-color: transparent;
+        }
+        .placeholder-text {
+            color: #888;
+        }
+
+        .heading-row{
+            font-weight: bold;
+        }
+        
+    </style>
+</head>
+<body>
+    <div style="text-align: right;">
+        <a href="{% url 'report' %}"><button>Back</button></a>
+    </div>
+    <h2>Report</h2>
+    <div id="reportForm">
+        
+        <table id="report-table">
+            <thead>
+                <tr>
+                    <th colspan="4">Date:  {{ reports.date|date:"Y-m-d" }} Report name:{{reports.name}}</th>
+                </tr>
+                <tr>
+                    <th>Sl. No.</th>
+                    <th>Questions</th>
+                    <th>Count</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                {% for head in heading %}
+                <tr class="heading-row">
+                    <td>{{ forloop.counter }}</td>
+                    <td class="editable-input placeholder-text">
+                        {{head.heading}}
+                    </td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                {% for q in questions %}
+                {% if q.heading == head %}
+                <tr class="question-row">
+
+                    <td>></td>
+                    <td contenteditable="true" class="editable-input placeholder-text">
+                        {{q.question_text}}
+                    </td>
+                    <td>{{q.count}}</td>
+                    <td></td>
+
+                </tr>
+                {% endif %}
+                {% endfor %}
+                <tr class="question-row">
+                    <form method="POST" action="{% url 'report_edit_maintain' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="report_date" value="{{ reports.date|date:'Y-m-d' }}">
+                        <input type="hidden" name="report_name" value="{{reports.name}}">
+                        <input type="hidden" name="heading" value="{{head.heading}}">
+                        <td>></td>
+                        <td contenteditable="true" class="editable-input placeholder-text">
+                            <input type="text" name="question" placeholder="Enter Question">
+                        </td>
+                        <td><input type="number" name="count" required></td>
+                        <td><button type="submit">Save</button></td>
+                    </form>
+                </tr>
+                {% endfor %}
+                <form method="POST" action="{% url 'report_edit_maintain' %}">
+                    {% csrf_token %}
+                <tr class="heading-row">
+                        <input type="hidden" name="report_date" value="{{ reports.date|date:'Y-m-d' }}">
+                        <input type="hidden" name="report_name" value="{{reports.name}}">
+                    <td>1</td>
+                    <td class="editable-input placeholder-text">
+                        <input type="text" name="heading" placeholder="Enter heading here">
+                    </td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr class="question-row">
+                    <td>></td>
+                    <td contenteditable="true" class="editable-input placeholder-text">
+                        <input type="text" name="question" placeholder="Enter Question">
+                    </td>
+                    <td><input type="number" name="count"></td>
+                    <td><button type="submit">Save</button></td>
+                </tr>
+                </form>
+            </tbody>
+        </table>
+        <!-- <button type="button" onclick="addHeading()">Add Heading</button>
+        <button type="button" onclick="addQuestion()">Add Question</button> -->
+        <!-- <button type="submit">Save Data</button> -->
+        </div>
+    <button id="download-report">Download Report</button>
+    
+ 
+
+<!-- // Function to download the report in PDF format -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+    document.getElementById("download-report").addEventListener("click", () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        const reportName = "{{ reports.name }}";
+        const reportDate = "{{ reports.date|date:'d-m-Y' }}";
+
+        doc.text(reportName, 10, 10);
+        doc.text(`Date: ${reportDate}`, 10, 20);
+
+        const reportContent = generateReportContent();
+        const lines = reportContent.split("\n");
+        let y = 30;
+        lines.forEach((line) => {
+            let x = 10; // Default x-coordinate for headings
+            if (line.startsWith("        ")) {
+                x = 30; // 8 spaces for 2 tabs
+            } else if (line.startsWith("    ")) {
+                x = 20; // 4 spaces for 1 tab
+            }
+
+            // Split the text into lines that fit within the page width
+            const splitLines = doc.splitTextToSize(line.trim(), 180);
+            splitLines.forEach((splitLine) => {
+                doc.text(splitLine, x, y);
+                y += 10;
+            });
+        });
+        doc.save("report {{request.user}}.pdf");
+    });
+
+    function generateReportContent() {
+        let content = "";
+        {% for head in heading %}
+            content += `{{ forloop.counter }}.{{ head.heading }}\n`;
+            {% for q in questions %}
+                {% if q.heading == head %}
+                    content += `    {{ q.question_text }}\n`; // 4 spaces for 1 tab
+                    content += `        Count: {{ q.count }}\n`; // 8 spaces for 2 tabs
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+        content += `\n`;
+        content += `\n`;
+        content += `{{request.user}}\n`;
+        content += `Asha Worker\n`;
+        content += `Ward no. n/a\n`;
+        return content;
+    }
+</script>
+
+</body>
+</html>

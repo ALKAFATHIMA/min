@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event List</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color:  #fddddd;
+  }
+
+  .container {
+    max-width: 800px;
+    max-height: 700px;
+    margin: 150px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  h2 {
+    margin-bottom: 20px;
+    text-align: center;
+    color: #333;
+  }
+
+  .search-container {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  #search-date {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    margin-right: 10px;
+    width: 200px;
+    box-sizing: border-box;
+  }
+
+  #search-btn {
+    padding: 8px 20px;
+    background-color: #d20909;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  #search-btn:hover {
+    background-color: #d20909;
+  }
+
+  .add-event-btn {
+    padding: 8px 20px;
+    background-color: #d20909;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .add-event-btn:hover {
+    background-color: #d20909;
+  }
+
+  .event-list {
+    margin-top: 30px;
+  }
+
+  .event {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    background-color: #f8f9fa;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .back-btn{
+    
+    margin-top: 0px;
+    right: 310px;
+            padding: 10px 20px;
+            background-color: #d20909;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            
+  }
+  .delete{
+     margin-left: 100%;
+    padding: 5px 10px;
+            background-color: #d20909;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div>
+    <a   href="/home"><button class="back-btn">Back</button></a>
+    
+</div>
+  <h2>Event List</h2>
+  <div class="search-container" style=" align-items: center;">
+    <input type="date" id="event-search-date">
+    <button id="search-btn" onclick="searchEvents()">Search</button>
+    <button class="add-event-btn" id="add-event-btn-1">+</button>
+  
+  </div>
+
+  <div id="events-container" class="event-list">
+    {% for event in events %}
+    <div class="event-list" style="display: flex; padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 10px; background-color: #f8f9fa;">
+        {{ event.title }} - Date: {{ event.event_date }} - From: {{ event.start_time }} To: {{ event.end_time }}
+        <form method="post" action="{% url 'delete_event' %}">
+            {% csrf_token %}
+            <input type="hidden" name="id" value="{{ event.id }}">
+            <div >
+            <button type="submit" class="delete">Delete</button>
+            </div>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+
+
+
+<form method="post" class="hidden" id="add-event-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="add-event-btn" id="add-event-btn">Add</button>
+</form>
+
+
+
+
+  
+</div>
+
+<script>
+  document.getElementById('add-event-btn-1').addEventListener('click', function() {
+        document.getElementById('add-event-form').classList.remove('hidden');
+    });
+
+
+
+function searchEvents() {
+    const searchDate = document.getElementById('event-search-date').value;
+    if (!searchDate) {
+        alert('Please select a date to search.');
+        return;
+    }
+    const eventsContainer = document.getElementById('events-container'); // Make sure we're referencing the right container
+    const [year, month, day] = searchDate.split('-');
+    fetch(`/events/${year}/${month}/${day}/`)
+        .then(response => response.json())
+        .then(events => {
+            displayEvents(events, eventsContainer);
+        })
+        .catch(error => console.error('Error fetching events:', error));
+}
+
+function displayEvents(events, eventsContainer) {
+    eventsContainer.innerHTML = ''; // Clear current events
+    if (events.length === 0) {
+        eventsContainer.innerHTML = '<p>No events found for this date.</p>';
+        return;
+    }
+    events.forEach(event => {
+        const eventDiv = document.createElement('div');
+        eventDiv.className = 'event';
+        eventDiv.innerHTML = `${event.title} - Date:
+                              ${event.date} - From: 
+                              ${event.start_time} To: ${event.end_time}`;
+        eventsContainer.appendChild(eventDiv);
+    });
+}
+</script>
+</body>
+</html>
